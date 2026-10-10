@@ -1,0 +1,14 @@
+{
+  "name": "ksrtc-card-form",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sample KSRTC card application form that sends a confirmation SMS via the Voxbay SMS API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20.12"
+  }
+}

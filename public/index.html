@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KSRTC Card Application</title>
+  <style>
+    :root { --brand: #b71c1c; --ink: #1d1d1f; --muted: #6b6b70; --line: #d9d9de; --bg: #f6f6f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+    main { max-width: 460px; margin: 40px auto; padding: 0 16px; }
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 24px; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    p.sub { margin: 0 0 20px; color: var(--muted); }
+    label { display: block; font-weight: 600; margin: 14px 0 4px; }
+    input, select { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+    .err { color: var(--brand); font-size: 14px; min-height: 1em; }
+    button { margin-top: 20px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: var(--brand); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
+    #result { margin-top: 16px; padding: 12px; border-radius: 8px; display: none; }
+    #result.ok { display: block; background: #e8f5e9; }
+    #result.bad { display: block; background: #fdecea; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <h1>KSRTC Card Application</h1>
+    <p class="sub">You will get an SMS confirmation with your application number.</p>
+    <form id="form" novalidate>
+      <label for="name">Full name</label>
+      <input id="name" name="name" maxlength="30" autocomplete="name" required>
+      <div class="err" data-for="name"></div>
+
+      <label for="mobile">Mobile number</label>
+      <input id="mobile" name="mobile" inputmode="numeric" maxlength="14" autocomplete="tel" placeholder="98765 43210" required>
+      <div class="err" data-for="mobile"></div>
+
+      <label for="cardType">Card type</label>
+      <select id="cardType" name="cardType" required>
+        <option value="">Select…</option>
+        <option value="student">Student Concession Card</option>
+        <option value="senior">Senior Citizen Card</option>
+        <option value="travel">Travel Card</option>
+      </select>
+      <div class="err" data-for="cardType"></div>
+
+      <label for="depot">Depot</label>
+      <input id="depot" name="depot" maxlength="30" placeholder="Thiruvananthapuram Central" required>
+      <div class="err" data-for="depot"></div>
+
+      <button type="submit">Submit application</button>
+    </form>
+    <div id="result" role="status"></div>
+  </div>
+</main>
+<script>
+  const form = document.getElementById('form');
+  const result = document.getElementById('result');
+  const button = form.querySelector('button');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    form.querySelectorAll('.err').forEach((el) => (el.textContent = ''));
+    result.className = '';
+    button.disabled = true;
+    try {
+      const res = await fetch('/api/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.fromEntries(new FormData(form))),
+      });
+      const data = await res.json();
+      if (data.errors) {
+        for (const [field, msg] of Object.entries(data.errors)) {
+          form.querySelector(`.err[data-for="${field}"]`).textContent = msg;
+        }
+      } else if (data.ok) {
+        const smsNote = data.sms.status === 'failed'
+          ? 'We could not send the SMS. Please note your application number.'
+          : 'A confirmation SMS has been sent.';
+        result.textContent = `Application ${data.applicationId} received. ${smsNote}`;
+        result.className = 'ok';
+        form.reset();
+      } else {
+        throw new Error(data.error);
+      }
+    } catch {
+      result.textContent = 'Something went wrong. Please try again.';
+      result.className = 'bad';
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
